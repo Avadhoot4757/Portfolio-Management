@@ -1,11 +1,13 @@
 package org.example.controller;
 
+import org.example.model.AssetType;
 import org.example.model.PortfolioAsset;
+import org.example.model.PortfolioPerformance;
 import org.example.service.PortfolioService;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/portfolio")
@@ -18,13 +20,16 @@ public class PortfolioController {
     }
 
     @PostMapping("/buy")
-    public PortfolioAsset buy(@RequestParam String ticker, @RequestParam double quantity) {
-        return service.buyAsset(ticker, quantity);
+    public PortfolioAsset buy(@RequestParam String symbol,
+                              @RequestParam AssetType type,
+                              @RequestParam BigDecimal quantity) {
+        return service.buyAsset(symbol, type, quantity);
     }
 
     @PostMapping("/sell")
-    public PortfolioAsset sell(@RequestParam String ticker, @RequestParam double quantity) {
-        return service.sellAsset(ticker, quantity);
+    public PortfolioAsset sell(@RequestParam String symbol,
+                               @RequestParam BigDecimal quantity) {
+        return service.sellAsset(symbol, quantity);
     }
 
     @GetMapping
@@ -33,8 +38,12 @@ public class PortfolioController {
     }
 
     @GetMapping("/value")
-    public Map<String, Double> totalValue() {
-        return Map.of("totalValue", service.getTotalPortfolioValue());
+    public BigDecimal totalValue() {
+        return service.getTotalPortfolioValue();
+    }
+
+    @GetMapping("/performance")
+    public PortfolioPerformance performance() {
+        return service.getPerformance();
     }
 }
-

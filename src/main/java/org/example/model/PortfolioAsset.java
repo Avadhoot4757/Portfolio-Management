@@ -1,6 +1,7 @@
 package org.example.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,16 +12,26 @@ public class PortfolioAsset {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String ticker;
-    private double quantity;
-    private double buyPrice;
+    private String symbol;   // TCS.NS, BTC, GOVT10Y etc.
+
+    @Enumerated(EnumType.STRING)
+    private AssetType assetType;
+
+    @Column(precision = 19, scale = 6)
+    private BigDecimal quantity;
+
+    @Column(precision = 19, scale = 6)
+    private BigDecimal buyPrice;
+
     private LocalDateTime buyTime;
 
     public PortfolioAsset() {}
 
-    public PortfolioAsset(Long id, String ticker, double quantity, double buyPrice, LocalDateTime buyTime) {
+    public PortfolioAsset(Long id, String symbol, AssetType assetType,
+                          BigDecimal quantity, BigDecimal buyPrice, LocalDateTime buyTime) {
         this.id = id;
-        this.ticker = ticker;
+        this.symbol = symbol;
+        this.assetType = assetType;
         this.quantity = quantity;
         this.buyPrice = buyPrice;
         this.buyTime = buyTime;
@@ -29,14 +40,17 @@ public class PortfolioAsset {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getTicker() { return ticker; }
-    public void setTicker(String ticker) { this.ticker = ticker; }
+    public String getSymbol() { return symbol; }
+    public void setSymbol(String symbol) { this.symbol = symbol; }
 
-    public double getQuantity() { return quantity; }
-    public void setQuantity(double quantity) { this.quantity = quantity; }
+    public AssetType getAssetType() { return assetType; }
+    public void setAssetType(AssetType assetType) { this.assetType = assetType; }
 
-    public double getBuyPrice() { return buyPrice; }
-    public void setBuyPrice(double buyPrice) { this.buyPrice = buyPrice; }
+    public BigDecimal getQuantity() { return quantity; }
+    public void setQuantity(BigDecimal quantity) { this.quantity = quantity; }
+
+    public BigDecimal getBuyPrice() { return buyPrice; }
+    public void setBuyPrice(BigDecimal buyPrice) { this.buyPrice = buyPrice; }
 
     public LocalDateTime getBuyTime() { return buyTime; }
     public void setBuyTime(LocalDateTime buyTime) { this.buyTime = buyTime; }

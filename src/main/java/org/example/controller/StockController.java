@@ -1,6 +1,6 @@
 package org.example.controller;
 
-import org.example.client.CryptoClient;
+import org.example.client.StockClient;
 import org.example.dto.MarketQuote;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -8,17 +8,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/crypto")
-public class CryptoController {
+@RequestMapping("/stocks")
+public class StockController {
 
-    private final CryptoClient cryptoClient;
+    private final StockClient stockClient;
 
-    public CryptoController(CryptoClient cryptoClient) {
-        this.cryptoClient = cryptoClient;
+    public StockController(StockClient stockClient) {
+        this.stockClient = stockClient;
     }
 
     @GetMapping("/quote/{symbol}")
     public MarketQuote getQuote(@PathVariable String symbol) {
-        return cryptoClient.getCryptoQuote(symbol);
+        return stockClient.getStockQuote(symbol);
     }
 }

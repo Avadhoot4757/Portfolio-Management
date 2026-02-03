@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class CryptoClient {
+public class StockClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -23,8 +23,8 @@ public class CryptoClient {
     @Value("${yahoo.api.host}")
     private String apiHost;
 
-    public MarketQuote getCryptoQuote(String symbol) {
-        String url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=US&symbols=" + symbol;
+    public MarketQuote getStockQuote(String ticker) {
+        String url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=US&symbols=" + ticker;
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-RapidAPI-Key", apiKey);
@@ -33,16 +33,16 @@ public class CryptoClient {
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, entity, Map.class);
-        return parseCryptoResponse(response.getBody(), symbol);
+        return parseStockResponse(response.getBody(), ticker);
     }
 
-    private MarketQuote parseCryptoResponse(Map<String, Object> body, String symbol) {
+    private MarketQuote parseStockResponse(Map<String, Object> body, String ticker) {
         Map<String, Object> quoteResponse = (Map<String, Object>) body.get("quoteResponse");
         List<Map<String, Object>> results = (List<Map<String, Object>>) quoteResponse.get("result");
         Map<String, Object> data = results.get(0);
 
         return new MarketQuote(
-                symbol,
+                ticker,
                 Double.parseDouble(data.get("regularMarketPrice").toString()),
                 Double.parseDouble(data.get("regularMarketChange").toString()),
                 Double.parseDouble(data.get("regularMarketChangePercent").toString()),
