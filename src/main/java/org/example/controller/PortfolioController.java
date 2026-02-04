@@ -38,12 +38,17 @@ public class PortfolioController {
     }
 
     @GetMapping("/value")
-    public BigDecimal totalValue() {
-        return service.getTotalPortfolioValue();
+    public PortfolioPerformance totalValue() {
+        return service.getPerformance();
     }
 
     @GetMapping("/performance")
     public PortfolioPerformance performance() {
         return service.getPerformance();
+    }
+
+    @GetMapping("/{id}")
+    public PortfolioPerformance getById(@PathVariable Long id) {
+        return service.getPerformanceById(id); // This must throw the ResourceNotFoundException
     }
 }
