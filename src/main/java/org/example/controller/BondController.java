@@ -19,6 +19,6 @@ public class BondController {
 
     @GetMapping("/quote/{symbol}")
     public MarketQuote getQuote(@PathVariable String symbol) {
-        return bondClient.getBondYield(symbol);
+        return bondClient.getBondQuote(symbol);
     }
 }

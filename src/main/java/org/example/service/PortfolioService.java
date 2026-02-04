@@ -33,11 +33,10 @@ public class PortfolioService {
         this.cryptoClient = cryptoClient;
     }
 
-    // 🔥 CENTRAL PRICE ROUTER
     private BigDecimal getLivePrice(String symbol, AssetType type) {
         return switch (type) {
             case STOCK -> BigDecimal.valueOf(stockClient.getStockQuote(symbol).getPrice());
-            case BOND -> BigDecimal.valueOf(bondClient.getBondYield(symbol).getPrice());
+            case BOND -> BigDecimal.valueOf(bondClient.getBondQuote(symbol).getPrice());
             case CRYPTO -> BigDecimal.valueOf(cryptoClient.getCryptoQuote(symbol).getPrice());
         };
     }
