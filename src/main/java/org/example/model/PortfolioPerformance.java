@@ -11,14 +11,16 @@ public class PortfolioPerformance {
     private BigDecimal profitLossPercent;
     private List<AssetPerformance> assets;
 
-    public PortfolioPerformance(BigDecimal totalInvested, BigDecimal currentValue,
-                                BigDecimal profitLoss, BigDecimal profitLossPercent,
-                                List<AssetPerformance> assets) {
+    public PortfolioPerformance(List<AssetPerformance> assets,
+                                BigDecimal totalInvested,
+                                BigDecimal currentValue,
+                                BigDecimal profitLoss,
+                                BigDecimal profitLossPercent) {
+        this.assets = assets; // List now comes first
         this.totalInvested = totalInvested;
         this.currentValue = currentValue;
         this.profitLoss = profitLoss;
         this.profitLossPercent = profitLossPercent;
-        this.assets = assets;
     }
 
     public BigDecimal getTotalInvested() { return totalInvested; }

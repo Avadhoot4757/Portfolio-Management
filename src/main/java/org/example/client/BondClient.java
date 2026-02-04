@@ -23,7 +23,7 @@ public class BondClient {
     @Value("${yahoo.api.host}")
     private String apiHost;
 
-    public MarketQuote getBondYield(String symbol) {
+    public MarketQuote getBondQuote(String symbol) {
         String url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-quotes?region=US&symbols=" + symbol;
 
         HttpHeaders headers = new HttpHeaders();
