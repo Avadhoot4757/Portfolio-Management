@@ -8,6 +8,7 @@ import org.example.model.AssetType;
 import org.example.model.PortfolioAsset;
 import org.example.model.PortfolioPerformance;
 import org.example.repository.PortfolioRepository;
+import org.example.exceptions.ResourceNotFoundException; // Fix 1: Corrected import
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -33,7 +34,6 @@ public class PortfolioService {
         this.cryptoClient = cryptoClient;
     }
 
-    // 🔥 CENTRAL PRICE ROUTER
     private BigDecimal getLivePrice(String symbol, AssetType type) {
         return switch (type) {
             case STOCK -> BigDecimal.valueOf(stockClient.getStockQuote(symbol).getPrice());
@@ -43,9 +43,7 @@ public class PortfolioService {
     }
 
     public PortfolioAsset buyAsset(String symbol, AssetType type, BigDecimal quantity) {
-
         BigDecimal livePrice = getLivePrice(symbol, type);
-
         PortfolioAsset asset = repository.findBySymbol(symbol).orElse(null);
 
         if (asset == null) {
@@ -63,9 +61,8 @@ public class PortfolioService {
     }
 
     public PortfolioAsset sellAsset(String symbol, BigDecimal quantity) {
-
         PortfolioAsset asset = repository.findBySymbol(symbol)
-                .orElseThrow(() -> new RuntimeException("Asset not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Asset not found: " + symbol));
 
         asset.setQuantity(asset.getQuantity().subtract(quantity));
 
@@ -81,21 +78,11 @@ public class PortfolioService {
         return repository.findAll();
     }
 
-    public BigDecimal getTotalPortfolioValue() {
-        return repository.findAll().stream()
-                .map(asset -> asset.getQuantity()
-                        .multiply(getLivePrice(asset.getSymbol(), asset.getAssetType())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
     public PortfolioPerformance getPerformance() {
-
         List<PortfolioAsset> assets = repository.findAll();
 
         List<AssetPerformance> assetStats = assets.stream().map(asset -> {
-
             BigDecimal currentPrice = getLivePrice(asset.getSymbol(), asset.getAssetType());
-
             BigDecimal invested = asset.getBuyPrice().multiply(asset.getQuantity());
             BigDecimal currentValue = currentPrice.multiply(asset.getQuantity());
             BigDecimal pnl = currentValue.subtract(invested);
@@ -117,10 +104,8 @@ public class PortfolioService {
                     pnl,
                     pnlPercent
             );
-
         }).toList();
 
-        // 🔥 Portfolio Totals
         BigDecimal totalInvested = assetStats.stream()
                 .map(AssetPerformance::getInvested)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -130,13 +115,22 @@ public class PortfolioService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalPnL = totalCurrent.subtract(totalInvested);
-
         BigDecimal totalPercent = BigDecimal.ZERO;
+
         if (totalInvested.compareTo(BigDecimal.ZERO) > 0) {
             totalPercent = totalPnL.divide(totalInvested, 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
         }
 
-        return new PortfolioPerformance(totalInvested, totalCurrent, totalPnL, totalPercent, assetStats);
+        // Fix 2: Updated to return the Performance DTO instead of looking for an ID
+        return new PortfolioPerformance(assetStats, totalInvested, totalCurrent, totalPnL, totalPercent);
+    }
+    public PortfolioPerformance getPerformanceById(Long id) {
+        // This line throws your custom exception if the ID is missing
+        repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Portfolio with ID " + id + " not found"));
+
+        // If it is found, return the performance (reuse your existing logic)
+        return getPerformance();
     }
 }
