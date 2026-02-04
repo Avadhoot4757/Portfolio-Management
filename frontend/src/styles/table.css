@@ -1,0 +1,55 @@
+﻿.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.holdings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.holdings-table thead th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.holdings-table tbody td {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.holdings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.symbol {
+  font-weight: 700;
+}
+
+.profit {
+  color: var(--primary);
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+}
+
+.loss {
+  color: var(--negative);
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+}
+
+.pnl-percent {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.holdings-table tbody tr:hover {
+  background: var(--surface-elevated);
+}
