@@ -7,7 +7,15 @@ const resolveType = (type) => {
   return type;
 };
 
-const HoldingsTable = ({ rows, formatCurrency, formatPercent }) => {
+const HoldingsTable = ({
+  rows,
+  formatCurrency,
+  formatPercent,
+  showRemove,
+  onRemove,
+  onRowClick,
+  selectedSymbol
+}) => {
   return (
     <div className="table-wrap">
       <table className="holdings-table">
@@ -20,6 +28,7 @@ const HoldingsTable = ({ rows, formatCurrency, formatPercent }) => {
             <th>Cost Basis</th>
             <th>Market Value</th>
             <th>P/L</th>
+            {showRemove && <th>Actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -29,6 +38,8 @@ const HoldingsTable = ({ rows, formatCurrency, formatPercent }) => {
             const pnl = Number(row.pnl || marketValue - row.invested || 0);
             const pnlPercent = Number(row.pnlPercent || 0);
             const isProfit = pnl >= 0;
+            const isSelected =
+              selectedSymbol && String(row.symbol || "").toUpperCase() === selectedSymbol;
 
             return (
               <motion.tr
@@ -36,6 +47,10 @@ const HoldingsTable = ({ rows, formatCurrency, formatPercent }) => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, delay: index * 0.03 }}
+                className={`${onRowClick ? "row-clickable" : ""} ${
+                  isSelected ? "row-selected" : ""
+                }`}
+                onClick={() => onRowClick?.(row)}
               >
                 <td className="symbol">{row.symbol}</td>
                 <td>{resolveType(row.type || row.assetType)}</td>
@@ -47,6 +62,17 @@ const HoldingsTable = ({ rows, formatCurrency, formatPercent }) => {
                   {formatCurrency(pnl)}
                   <span className="pnl-percent">{formatPercent(pnlPercent)}</span>
                 </td>
+                {showRemove && (
+                  <td>
+                    <button
+                      className="table-action"
+                      type="button"
+                      onClick={() => onRemove?.(row.symbol)}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                )}
               </motion.tr>
             );
           })}

@@ -7,15 +7,13 @@ import SummaryCards from "./SummaryCards";
 
 const Dashboard = ({
   allocation,
-  performance,
+  assets,
   history,
   summaryCards,
   totalValue,
   formatCurrency,
   formatPercent
 }) => {
-  const assets = performance.assets || [];
-
   return (
     <div className="dashboard">
       <div className="dashboard-grid">

@@ -1,7 +1,10 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
+import HoldingsPage from "./components/HoldingsPage";
+import PerformancePage from "./components/PerformancePage";
 import {
   getPortfolioPerformance,
   getPortfolioValue,
@@ -128,7 +131,8 @@ const App = () => {
   const [formState, setFormState] = useState({
     symbol: "",
     type: "STOCK",
-    quantity: ""
+    quantity: "",
+    purchaseDate: ""
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -174,6 +178,7 @@ const App = () => {
     () => buildTotalsByType(performance.assets || []),
     [performance]
   );
+  const assets = useMemo(() => performance.assets || [], [performance]);
 
   const summaryCards = useMemo(
     () => [
@@ -193,13 +198,18 @@ const App = () => {
   }, [totals, cashBalance]);
 
   const openAddModal = () => {
-    setFormState({ symbol: "", type: "STOCK", quantity: "" });
+    setFormState({ symbol: "", type: "STOCK", quantity: "", purchaseDate: "" });
     setFormError("");
     setIsAddOpen(true);
   };
 
-  const openRemoveModal = () => {
-    setFormState({ symbol: "", type: "STOCK", quantity: "" });
+  const openRemoveForSymbol = (symbol) => {
+    setFormState({
+      symbol: (symbol || "").toUpperCase(),
+      type: "STOCK",
+      quantity: "",
+      purchaseDate: ""
+    });
     setFormError("");
     setIsRemoveOpen(true);
   };
@@ -229,6 +239,11 @@ const App = () => {
       return;
     }
 
+    if (isAddOpen && !formState.purchaseDate) {
+      setFormError("Please provide the purchase date.");
+      return;
+    }
+
     const quantityValue = Number(formState.quantity);
     if (Number.isNaN(quantityValue) || quantityValue <= 0) {
       setFormError("Quantity must be a positive number.");
@@ -240,7 +255,8 @@ const App = () => {
       const payload = {
         symbol: formState.symbol.toUpperCase(),
         type: resolveApiType(formState.type),
-        quantity: quantityValue
+        quantity: quantityValue,
+        purchaseDate: formState.purchaseDate
       };
 
       if (isAddOpen) {
@@ -268,17 +284,49 @@ const App = () => {
           totalValue={formatCurrency(portfolioValue)}
           totalReturn={formatPercent(performance.profitLossPercent)}
           onAdd={openAddModal}
-          onRemove={openRemoveModal}
         />
-        <Dashboard
-          allocation={assetAllocation}
-          performance={performance}
-          history={history}
-          summaryCards={summaryCards}
-          totalValue={formatCurrency(portfolioValue)}
-          formatCurrency={formatCurrency}
-          formatPercent={formatPercent}
-        />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <section id="dashboard" className="page-section">
+                <Dashboard
+                  allocation={assetAllocation}
+                  assets={assets}
+                  history={history}
+                  summaryCards={summaryCards}
+                  totalValue={formatCurrency(portfolioValue)}
+                  formatCurrency={formatCurrency}
+                  formatPercent={formatPercent}
+                />
+              </section>
+            }
+          />
+          <Route
+            path="/holdings"
+            element={
+              <HoldingsPage
+                assets={assets}
+                formatCurrency={formatCurrency}
+                formatPercent={formatPercent}
+                onRemoveAsset={openRemoveForSymbol}
+              />
+            }
+          />
+          <Route
+            path="/performance"
+            element={
+              <PerformancePage
+                history={history}
+                performance={performance}
+                totalValue={portfolioValue}
+                formatCurrency={formatCurrency}
+                formatPercent={formatPercent}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
 
       {(isAddOpen || isRemoveOpen) && (
@@ -321,6 +369,17 @@ const App = () => {
                   step="0.0001"
                 />
               </label>
+              {isAddOpen && (
+                <label className="form-field">
+                  <span>Purchase Date</span>
+                  <input
+                    name="purchaseDate"
+                    value={formState.purchaseDate}
+                    onChange={handleInputChange}
+                    type="date"
+                  />
+                </label>
+              )}
 
               {formError && <div className="form-error">{formError}</div>}
 

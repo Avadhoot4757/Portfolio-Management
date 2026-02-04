@@ -16,9 +16,11 @@ const Header = ({ totalValue, totalReturn, onAdd, onRemove }) => {
       </div>
       <div className="header-actions">
         <button className="btn" onClick={onAdd} type="button">Add Asset</button>
-        <button className="btn secondary" onClick={onRemove} type="button">
-          Remove
-        </button>
+        {onRemove && (
+          <button className="btn secondary" onClick={onRemove} type="button">
+            Remove
+          </button>
+        )}
       </div>
     </header>
   );
