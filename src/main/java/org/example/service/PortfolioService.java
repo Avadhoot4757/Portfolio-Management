@@ -54,6 +54,7 @@ public class PortfolioService {
                                                       BigDecimal quantity, LocalDateTime buyTime) {
         // 1. CHANGE THIS LINE: Call your new Python bridge instead of the old API method
         BigDecimal historicalPrice = fetchPriceWithPython(symbol, buyTime);
+        System.out.println(historicalPrice);
 
         // 2. The rest of the logic remains exactly the same
         PortfolioAsset asset = new PortfolioAsset();
@@ -68,50 +69,76 @@ public class PortfolioService {
 
 
     public BigDecimal fetchPriceWithPython(String symbol, LocalDateTime buyTime) {
-    try {
-        // 1. Format the symbol based on asset type logic if necessary
-        // For example, if your DB stores 'BTC', Yahoo needs 'BTC-USD'
-        String formattedSymbol = symbol;
-        
-        // 2. Prepare the command
-        String dateStr = buyTime.toLocalDate().toString(); // Formats as YYYY-MM-DD
-        Path scriptPath = Paths.get(System.getProperty("user.dir"), "fetch_price.py").toAbsolutePath();
-        ProcessBuilder pb = new ProcessBuilder("python", scriptPath.toString(), formattedSymbol, dateStr);
-        pb.directory(new File(System.getProperty("user.dir")));
-        pb.redirectErrorStream(true);
-        
-        // 3. Execute and read the output
-        Process process = pb.start();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        ArrayList<String> lines = new ArrayList<>();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            if (!line.isBlank()) {
-                lines.add(line.trim());
-            }
-        }
-        process.waitFor();
+        try {
+            String formattedSymbol = symbol;
+            String dateStr = buyTime.toLocalDate().toString(); // YYYY-MM-DD
+            Path scriptPath = Paths.get(System.getProperty("user.dir"), "fetch_price.py").toAbsolutePath();
 
-        if (!lines.isEmpty()) {
-            String combined = String.join(" ", lines);
-            Pattern pattern = Pattern.compile("[-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?");
-            Matcher matcher = pattern.matcher(combined);
-            if (matcher.find()) {
-                String numeric = matcher.group();
-                if (!numeric.equals("0")) {
-                    return new BigDecimal(numeric);
+            System.out.println("[PyBridge] running: python3 " + scriptPath + " " + formattedSymbol + " " + dateStr);
+            ProcessBuilder pb = new ProcessBuilder("python3", scriptPath.toString(), formattedSymbol, dateStr);
+            pb.directory(new File(System.getProperty("user.dir")));
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            ArrayList<String> lines = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!line.isBlank()) {
+                    String trimmed = line.trim();
+                    lines.add(trimmed);
+                    System.out.println("[PyBridge] OUT: " + trimmed);
                 }
             }
+            int exitCode = process.waitFor();
+            System.out.println("[PyBridge] exit code: " + exitCode);
+
+            // If the Python script failed (non-zero), don't attempt to extract a number from arbitrary debug text:
+            if (exitCode != 0) {
+                System.out.println("[PyBridge] python returned non-zero exit code; treating as failure");
+                return BigDecimal.ZERO;
+            }
+
+            // Prefer explicit PRICE: line from Python
+            for (String l : lines) {
+                if (l.startsWith("PRICE:")) {
+                    String val = l.substring("PRICE:".length()).trim();
+                    try {
+                        BigDecimal res = new BigDecimal(val);
+                        System.out.println("[PyBridge] parsed PRICE: " + res);
+                        if (res.compareTo(BigDecimal.ZERO) != 0) {
+                            return res;
+                        }
+                    } catch (Exception e) {
+                        System.out.println("[PyBridge] failed to parse PRICE line: " + val);
+                    }
+                }
+            }
+
+            // Fallback: first numeric found in combined output (only reached if exitCode == 0)
+            if (!lines.isEmpty()) {
+                String combined = String.join(" ", lines);
+                Pattern pattern = Pattern.compile("[-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?");
+                Matcher matcher = pattern.matcher(combined);
+                if (matcher.find()) {
+                    String numeric = matcher.group();
+                    System.out.println("[PyBridge] regex found numeric: " + numeric);
+                    if (!numeric.equals("0")) {
+                        return new BigDecimal(numeric);
+                    } else {
+                        System.out.println("[PyBridge] numeric is zero, returning fallback");
+                    }
+                } else {
+                    System.out.println("[PyBridge] no numeric found in output");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("[PyBridge] exception: " + e.getMessage());
+            e.printStackTrace();
         }
-    } catch (Exception e) {
-        e.printStackTrace();
+        System.out.println("[PyBridge] returning BigDecimal.ZERO as fallback");
+        return BigDecimal.ZERO; // Fallback if Python fails
     }
-    return BigDecimal.ZERO; // Fallback if Python fails
-}
-
-            
-
-
 
     public void removeAsset(Long id) {
         // Instead of finding by symbol and subtracting, we find the specific ID
