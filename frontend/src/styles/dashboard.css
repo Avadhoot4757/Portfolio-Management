@@ -76,6 +76,15 @@
   font-weight: 500;
 }
 
+.chart-select {
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
 .settings-list {
   display: flex;
   flex-direction: column;
@@ -181,6 +190,20 @@
   height: 260px;
 }
 
+.chart-embed {
+  height: 260px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+}
+
+.chart-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 .table-card {
   padding: 0;
 }
@@ -255,6 +278,43 @@
 .chart-center-inner strong {
   font-size: 18px;
   font-weight: 700;
+}
+
+.cash-controls {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cash-balance {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.cash-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+.cash-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+@media (min-width: 480px) {
+  .cash-actions {
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+  }
 }
 
 @media (max-width: 1200px) {

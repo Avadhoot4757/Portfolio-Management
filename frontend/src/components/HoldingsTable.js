@@ -93,7 +93,7 @@ const HoldingsTable = ({
                     <button
                       className="table-action"
                       type="button"
-                      onClick={() => onRemove?.(row.symbol)}
+                      onClick={() => onRemove?.(row)}
                     >
                       Remove
                     </button>

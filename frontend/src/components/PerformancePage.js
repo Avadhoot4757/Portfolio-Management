@@ -44,12 +44,13 @@ const resolveAssetHistory = (asset) => {
 const PerformancePage = ({
   history,
   performance,
+  assets: assetsProp,
   totalValue,
   formatCurrency,
   formatPercent
 }) => {
   const [selectedAsset, setSelectedAsset] = useState(null);
-  const assets = performance.assets || [];
+  const assets = assetsProp || performance.assets || [];
 
   const summaryCards = useMemo(() => {
     const totalInvested = Number(performance.totalInvested || 0);

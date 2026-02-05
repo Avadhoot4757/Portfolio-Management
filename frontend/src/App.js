@@ -57,6 +57,7 @@ const App = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState(false);
   const [formState, setFormState] = useState({
+    id: null,
     symbol: "",
     type: "STOCK",
     quantity: "",
@@ -66,8 +67,11 @@ const App = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (options = {}) => {
+    const { showLoading = true } = options;
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
       const [assetsResponse, performanceResponse] = await Promise.all([
         getAllAssets(),
@@ -102,12 +106,14 @@ const App = () => {
       console.error("Failed to load portfolio data:", error);
       setFormError("Failed to load portfolio data. Please try again later.");
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData({ showLoading: true });
   }, []);
 
   const totals = useMemo(
@@ -132,15 +138,30 @@ const App = () => {
     };
   }, [totals, cashBalance]);
 
+  const totalValueWithCash = Number(portfolioValue || 0) + Number(cashBalance || 0);
+
+  const handleAddCash = (amount) => {
+    const value = Number(amount);
+    if (Number.isNaN(value) || value <= 0) return;
+    setCashBalance((prev) => prev + value);
+  };
+
+  const handleRemoveCash = (amount) => {
+    const value = Number(amount);
+    if (Number.isNaN(value) || value <= 0) return;
+    setCashBalance((prev) => Math.max(0, prev - value));
+  };
+
   const openAddModal = () => {
-    setFormState({ symbol: "", type: "STOCK", quantity: "", purchaseDate: "" });
+    setFormState({ id: null, symbol: "", type: "STOCK", quantity: "", purchaseDate: "" });
     setFormError("");
     setIsAddOpen(true);
   };
 
-  const openRemoveForSymbol = (symbol) => {
+  const openRemoveForAsset = (asset) => {
     setFormState({
-      symbol: (symbol || "").toUpperCase(),
+      id: asset?.id ?? null,
+      symbol: (asset?.symbol || "").toUpperCase(),
       type: "STOCK",
       quantity: "",
       purchaseDate: ""
@@ -166,7 +187,7 @@ const App = () => {
     setFormError("");
     setIsSubmitting(true);
 
-    if (!formState.symbol || !formState.quantity) {
+    if (isAddOpen && (!formState.symbol || !formState.quantity)) {
       setFormError("Symbol and quantity are required.");
       setIsSubmitting(false);
       return;
@@ -178,31 +199,34 @@ const App = () => {
       return;
     }
 
-    const quantityValue = Number(formState.quantity);
-    if (isNaN(quantityValue) || quantityValue <= 0) {
-      setFormError("Quantity must be a positive number.");
-      setIsSubmitting(false);
-      return;
+    if (isAddOpen) {
+      const quantityValue = Number(formState.quantity);
+      if (isNaN(quantityValue) || quantityValue <= 0) {
+        setFormError("Quantity must be a positive number.");
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     try {
       const payload = {
+        id: formState.id,
         symbol: formState.symbol.toUpperCase(),
         type: formState.type,
-        quantity: quantityValue,
+        quantity: isAddOpen ? Number(formState.quantity) : undefined,
         purchaseDate: formState.purchaseDate
       };
 
       if (isAddOpen) {
         await buyAsset(payload);
       } else if (isRemoveOpen) {
-        await sellAsset({
-          symbol: payload.symbol,
-          quantity: payload.quantity
-        });
+        if (!payload.id) {
+          throw new Error("Missing asset id for removal.");
+        }
+        await sellAsset({ id: payload.id });
       }
 
-      await loadData();
+      await loadData({ showLoading: false });
       closeModals();
     } catch (error) {
       setFormError(error.message || "Operation failed. Please try again.");
@@ -220,7 +244,7 @@ const App = () => {
       <Sidebar />
       <div className="content">
         <Header
-          totalValue={formatCurrency(portfolioValue)}
+          totalValue={formatCurrency(totalValueWithCash)}
           totalReturn={formatPercent(performance?.profitLossPercent || 0)}
           onAdd={openAddModal}
         />
@@ -235,7 +259,10 @@ const App = () => {
                   assets={mergedAssets}
                   history={history}
                   summaryCards={summaryCards}
-                  totalValue={formatCurrency(portfolioValue)}
+                  totalValue={formatCurrency(totalValueWithCash)}
+                  cashBalance={cashBalance}
+                  onAddCash={handleAddCash}
+                  onRemoveCash={handleRemoveCash}
                   formatCurrency={formatCurrency}
                   formatPercent={formatPercent}
                 />
@@ -249,7 +276,7 @@ const App = () => {
                 assets={mergedAssets}                  // ← now merged, has both basic + performance fields
                 formatCurrency={formatCurrency}
                 formatPercent={formatPercent}
-                onRemoveAsset={openRemoveForSymbol}
+                onRemoveAsset={openRemoveForAsset}
               />
             }
           />
@@ -259,6 +286,7 @@ const App = () => {
               <PerformancePage
                 history={history}
                 performance={performance || {}}
+                assets={mergedAssets}
                 totalValue={portfolioValue}
                 formatCurrency={formatCurrency}
                 formatPercent={formatPercent}
@@ -286,7 +314,7 @@ const App = () => {
                   value={formState.symbol}
                   onChange={handleInputChange}
                   placeholder="AAPL, BTC-USD, VOO"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isRemoveOpen}
                 />
               </label>
 
@@ -306,19 +334,21 @@ const App = () => {
                 </label>
               )}
 
-              <label className="form-field">
-                <span>Quantity</span>
-                <input
-                  name="quantity"
-                  type="number"
-                  step="0.0001"
-                  min="0.0001"
-                  value={formState.quantity}
-                  onChange={handleInputChange}
-                  placeholder="10"
-                  disabled={isSubmitting}
-                />
-              </label>
+              {isAddOpen && (
+                <label className="form-field">
+                  <span>Quantity</span>
+                  <input
+                    name="quantity"
+                    type="number"
+                    step="0.0001"
+                    min="0.0001"
+                    value={formState.quantity}
+                    onChange={handleInputChange}
+                    placeholder="10"
+                    disabled={isSubmitting}
+                  />
+                </label>
+              )}
 
               {isAddOpen && (
                 <label className="form-field">

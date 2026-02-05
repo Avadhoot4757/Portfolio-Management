@@ -55,18 +55,16 @@ export const buyAsset = async ({ symbol, type, quantity, purchaseDate }) => {
   return handleResponse(response);
 };
 
-export const sellAsset = async ({ symbol, quantity }) => {
-  const params = new URLSearchParams({
-    symbol: symbol.toUpperCase(),
-    quantity: quantity.toString(),
+export const sellAsset = async ({ id }) => {
+  if (id === undefined || id === null) {
+    throw new Error("Asset id is required to remove.");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/remove/${id}`, {
+    method: "DELETE"
   });
 
-  const response = await fetch(`${API_BASE_URL}/remove?${params.toString()}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  });
-
+  // DELETE returns 204 No Content; handle accordingly
+  if (response.status === 204) return true;
   return handleResponse(response);
 };
