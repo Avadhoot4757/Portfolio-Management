@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import HoldingsPage from "./components/HoldingsPage";
 import PerformancePage from "./components/PerformancePage";
+import SettingsPage from "./components/SettingsPage";
 import {
   getPortfolioPerformance,
   getPortfolioValue,
@@ -325,6 +326,7 @@ const App = () => {
               />
             }
           />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
