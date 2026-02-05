@@ -61,40 +61,31 @@ public class PortfolioService {
     }
 
 
-    private BigDecimal fetchPriceWithPython(String symbol, LocalDateTime time) {
-        String dateStr = time.toLocalDate().toString();
-        // Path to your virtual environment's python executable
-//        String pythonExecutable = System.getProperty("user.dir") + "\\.venv\\Scripts\\python.exe";
-        String pythonExecutable = "C:/Users/Administrator/IdeaProjects/Portfolio-Management/.venv/Scripts/python.exe";
-
-        try {
-            ProcessBuilder pb = new ProcessBuilder(pythonExecutable, "fetch_price.py", symbol, dateStr);
-            pb.redirectErrorStream(true); // Merges errors into the output stream
-            Process process = pb.start();
-
-            // READING LOGIC: Read the output from the Python script
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            String priceResult = "0";
-
-            while ((line = reader.readLine()) != null) {
-                // We capture the last line printed by Python (which should be the price)
-                priceResult = line.trim();
-                System.out.println("Python Output for " + symbol + ": " + priceResult);
-            }
-
-            int exitCode = process.waitFor(); // Wait for the script to finish
-
-            if (exitCode == 0 && !priceResult.isEmpty() && !priceResult.equals("0")) {
-                return new BigDecimal(priceResult);
-            }
-        } catch (Exception e) {
-            System.err.println("Python Bridge Error: " + e.getMessage());
+    public BigDecimal fetchPriceWithPython(String symbol, LocalDateTime buyTime) {
+    try {
+        // 1. Format the symbol based on asset type logic if necessary
+        // For example, if your DB stores 'BTC', Yahoo needs 'BTC-USD'
+        String formattedSymbol = symbol;
+        
+        // 2. Prepare the command
+        String dateStr = buyTime.toLocalDate().toString(); // Formats as YYYY-MM-DD
+        ProcessBuilder pb = new ProcessBuilder("python", "fetch_price.py", formattedSymbol, dateStr);
+        
+        // 3. Execute and read the output
+        Process process = pb.start();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line = reader.readLine();
+        
+        if (line != null && !line.equals("0")) {
+            return new BigDecimal(line);
         }
-
-        // This ensures the method always returns a value, even if the script fails
-        return BigDecimal.ZERO;
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+    return BigDecimal.ZERO; // Fallback if Python fails
+}
+
+            
 
 
 
