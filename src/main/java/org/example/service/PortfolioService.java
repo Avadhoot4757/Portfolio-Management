@@ -17,6 +17,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class PortfolioService {
@@ -61,40 +67,49 @@ public class PortfolioService {
     }
 
 
-    private BigDecimal fetchPriceWithPython(String symbol, LocalDateTime time) {
-        String dateStr = time.toLocalDate().toString();
-        // Path to your virtual environment's python executable
-//        String pythonExecutable = System.getProperty("user.dir") + "\\.venv\\Scripts\\python.exe";
-        String pythonExecutable = "C:/Users/Administrator/IdeaProjects/Portfolio-Management/.venv/Scripts/python.exe";
-
-        try {
-            ProcessBuilder pb = new ProcessBuilder(pythonExecutable, "fetch_price.py", symbol, dateStr);
-            pb.redirectErrorStream(true); // Merges errors into the output stream
-            Process process = pb.start();
-
-            // READING LOGIC: Read the output from the Python script
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            String priceResult = "0";
-
-            while ((line = reader.readLine()) != null) {
-                // We capture the last line printed by Python (which should be the price)
-                priceResult = line.trim();
-                System.out.println("Python Output for " + symbol + ": " + priceResult);
+    public BigDecimal fetchPriceWithPython(String symbol, LocalDateTime buyTime) {
+    try {
+        // 1. Format the symbol based on asset type logic if necessary
+        // For example, if your DB stores 'BTC', Yahoo needs 'BTC-USD'
+        String formattedSymbol = symbol;
+        
+        // 2. Prepare the command
+        String dateStr = buyTime.toLocalDate().toString(); // Formats as YYYY-MM-DD
+        Path scriptPath = Paths.get(System.getProperty("user.dir"), "fetch_price.py").toAbsolutePath();
+        ProcessBuilder pb = new ProcessBuilder("python", scriptPath.toString(), formattedSymbol, dateStr);
+        pb.directory(new File(System.getProperty("user.dir")));
+        pb.redirectErrorStream(true);
+        
+        // 3. Execute and read the output
+        Process process = pb.start();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        ArrayList<String> lines = new ArrayList<>();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (!line.isBlank()) {
+                lines.add(line.trim());
             }
-
-            int exitCode = process.waitFor(); // Wait for the script to finish
-
-            if (exitCode == 0 && !priceResult.isEmpty() && !priceResult.equals("0")) {
-                return new BigDecimal(priceResult);
-            }
-        } catch (Exception e) {
-            System.err.println("Python Bridge Error: " + e.getMessage());
         }
+        process.waitFor();
 
-        // This ensures the method always returns a value, even if the script fails
-        return BigDecimal.ZERO;
+        if (!lines.isEmpty()) {
+            String combined = String.join(" ", lines);
+            Pattern pattern = Pattern.compile("[-+]?\\d*\\.?\\d+(?:[eE][-+]?\\d+)?");
+            Matcher matcher = pattern.matcher(combined);
+            if (matcher.find()) {
+                String numeric = matcher.group();
+                if (!numeric.equals("0")) {
+                    return new BigDecimal(numeric);
+                }
+            }
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+    return BigDecimal.ZERO; // Fallback if Python fails
+}
+
+            
 
 
 

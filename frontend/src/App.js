@@ -13,7 +13,7 @@ import {
   sellAsset
 } from "./services/api";
 
-const DEFAULT_CASH_BALANCE = 25000;
+const DEFAULT_CASH_BALANCE = 3268.03;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-US", {
