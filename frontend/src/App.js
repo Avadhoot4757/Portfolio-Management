@@ -6,6 +6,7 @@ import Dashboard from "./components/Dashboard";
 import HoldingsPage from "./components/HoldingsPage";
 import PerformancePage from "./components/PerformancePage";
 import SettingsPage from "./components/SettingsPage";
+import ChatbotWidget from "./components/ChatbotWidget";
 import {
   getAllAssets,
   getPortfolioPerformance,
@@ -248,6 +249,8 @@ const App = () => {
           totalReturn={formatPercent(performance?.profitLossPercent || 0)}
           onAdd={openAddModal}
         />
+        
+        <ChatbotWidget />
 
         <Routes>
           <Route
