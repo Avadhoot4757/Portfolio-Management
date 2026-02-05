@@ -7,79 +7,13 @@ import HoldingsPage from "./components/HoldingsPage";
 import PerformancePage from "./components/PerformancePage";
 import SettingsPage from "./components/SettingsPage";
 import {
+  getAllAssets,
   getPortfolioPerformance,
-  getPortfolioValue,
   buyAsset,
   sellAsset
 } from "./services/api";
 
-const DEFAULT_CASH_BALANCE = 25000;
-
-const MOCK_PERFORMANCE = {
-  totalInvested: 120000,
-  currentValue: 134500,
-  profitLoss: 14500,
-  profitLossPercent: 12.08,
-  assets: [
-    {
-      symbol: "AAPL",
-      type: "STOCK",
-      quantity: 20,
-      buyPrice: 140,
-      currentPrice: 175,
-      invested: 2800,
-      currentValue: 3500,
-      pnl: 700,
-      pnlPercent: 25
-    },
-    {
-      symbol: "VOO",
-      type: "BOND",
-      quantity: 35,
-      buyPrice: 385,
-      currentPrice: 405,
-      invested: 13475,
-      currentValue: 14175,
-      pnl: 700,
-      pnlPercent: 5.19
-    },
-    {
-      symbol: "BTC-USD",
-      type: "CRYPTO",
-      quantity: 0.8,
-      buyPrice: 32000,
-      currentPrice: 36500,
-      invested: 25600,
-      currentValue: 29200,
-      pnl: 3600,
-      pnlPercent: 14.06
-    },
-    {
-      symbol: "MSFT",
-      type: "STOCK",
-      quantity: 12,
-      buyPrice: 290,
-      currentPrice: 330,
-      invested: 3480,
-      currentValue: 3960,
-      pnl: 480,
-      pnlPercent: 13.79
-    }
-  ]
-};
-
-const MOCK_HISTORY = [
-  { date: "Jan 05", value: 98000 },
-  { date: "Jan 12", value: 102500 },
-  { date: "Jan 19", value: 101200 },
-  { date: "Jan 26", value: 108400 },
-  { date: "Feb 02", value: 112700 },
-  { date: "Feb 09", value: 118200 },
-  { date: "Feb 16", value: 121300 },
-  { date: "Feb 23", value: 125800 },
-  { date: "Mar 02", value: 129600 },
-  { date: "Mar 09", value: 134500 }
-];
+const DEFAULT_CASH_BALANCE = 25000; // ← keep until you have a real cash endpoint
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-US", {
@@ -100,7 +34,7 @@ const normalizeType = (type) => {
 const buildTotalsByType = (assets) => {
   return assets.reduce(
     (acc, asset) => {
-      const type = normalizeType(asset.type || asset.assetType);
+      const type = normalizeType(asset.assetType || asset.type);
       const currentValue = Number(asset.currentValue || 0);
 
       if (type === "STOCK") acc.stocks += currentValue;
@@ -113,20 +47,11 @@ const buildTotalsByType = (assets) => {
   );
 };
 
-const resolvePortfolioValue = (valueResponse, performance) => {
-  if (typeof valueResponse === "number") return valueResponse;
-  if (valueResponse && typeof valueResponse === "object") {
-    const parsed = Number(valueResponse.value || valueResponse.total);
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-  return Number(performance.currentValue || 0);
-};
-
 const App = () => {
-  const [performance, setPerformance] = useState(MOCK_PERFORMANCE);
-  const [portfolioValue, setPortfolioValue] = useState(MOCK_PERFORMANCE.currentValue);
-  const [history, setHistory] = useState(MOCK_HISTORY);
-  const [cashBalance, setCashBalance] = useState(DEFAULT_CASH_BALANCE);
+  const [performance, setPerformance] = useState(null);
+  const [portfolioValue, setPortfolioValue] = useState(0);
+  const [history, setHistory] = useState([]); // ← still mock / empty until you add history endpoint
+  const [cashBalance, setCashBalance] = useState(DEFAULT_CASH_BALANCE); // ← placeholder
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState(false);
   const [formState, setFormState] = useState({
@@ -137,49 +62,48 @@ const App = () => {
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      const [performanceRes, valueRes] = await Promise.all([
-        getPortfolioPerformance(),
-        getPortfolioValue()
+      const [assetsResponse, performanceResponse] = await Promise.all([
+        getAllAssets(),
+        getPortfolioPerformance()
       ]);
 
-      const performanceData = performanceRes?.data || performanceRes;
-      const valueData = valueRes?.data || valueRes;
+      // performanceResponse should match your example:
+      // { totalInvested, currentValue, profitLoss, profitLossPercent, assets: [...] }
+      setPerformance(performanceResponse);
+      setPortfolioValue(Number(performanceResponse.currentValue || 0));
 
-      if (performanceData) {
-        setPerformance(performanceData);
-        setPortfolioValue(resolvePortfolioValue(valueData, performanceData));
-      }
+      // If you later add a cash balance endpoint, fetch it here:
+      // const cash = await getCashBalance();
+      // setCashBalance(cash);
+
+      // History still mocked — replace when you have real data
+      // setHistory(realHistory);
     } catch (error) {
-      setPerformance(MOCK_PERFORMANCE);
-      setPortfolioValue(MOCK_PERFORMANCE.currentValue);
-      setHistory(MOCK_HISTORY);
-      setCashBalance(DEFAULT_CASH_BALANCE);
+      console.error("Failed to load portfolio data:", error);
+      setFormError("Failed to load portfolio data. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const init = async () => {
-      if (!isMounted) return;
-      await loadData();
-    };
-
-    init();
-
-    return () => {
-      isMounted = false;
-    };
+    loadData();
+    // Optional: auto-refresh every 30–60 seconds
+    // const interval = setInterval(loadData, 60000);
+    // return () => clearInterval(interval);
   }, []);
 
   const totals = useMemo(
-    () => buildTotalsByType(performance.assets || []),
+    () => buildTotalsByType(performance?.assets || []),
     [performance]
   );
-  const assets = useMemo(() => performance.assets || [], [performance]);
+
+  const assets = useMemo(() => performance?.assets || [], [performance]);
 
   const summaryCards = useMemo(
     () => [
@@ -219,6 +143,7 @@ const App = () => {
     setIsAddOpen(false);
     setIsRemoveOpen(false);
     setFormError("");
+    setIsSubmitting(false);
   };
 
   const handleInputChange = (event) => {
@@ -226,56 +151,60 @@ const App = () => {
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
 
-  const resolveApiType = (type) => {
-    if (type === "BOND_ETF") return "BOND";
-    return type;
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     setFormError("");
+    setIsSubmitting(true);
 
     if (!formState.symbol || !formState.quantity) {
-      setFormError("Please provide a symbol and quantity.");
+      setFormError("Symbol and quantity are required.");
+      setIsSubmitting(false);
       return;
     }
 
     if (isAddOpen && !formState.purchaseDate) {
-      setFormError("Please provide the purchase date.");
+      setFormError("Purchase date is required when adding.");
+      setIsSubmitting(false);
       return;
     }
 
     const quantityValue = Number(formState.quantity);
-    if (Number.isNaN(quantityValue) || quantityValue <= 0) {
+    if (isNaN(quantityValue) || quantityValue <= 0) {
       setFormError("Quantity must be a positive number.");
+      setIsSubmitting(false);
       return;
     }
 
-    setIsSubmitting(true);
     try {
       const payload = {
         symbol: formState.symbol.toUpperCase(),
-        type: resolveApiType(formState.type),
+        type: formState.type, // already matches your enum (STOCK, BOND, CRYPTO)
         quantity: quantityValue,
+        // purchaseDate is not used by backend yet — can be removed later
         purchaseDate: formState.purchaseDate
       };
 
       if (isAddOpen) {
         await buyAsset(payload);
-      }
-
-      if (isRemoveOpen) {
-        await sellAsset({ symbol: payload.symbol, quantity: payload.quantity });
+      } else if (isRemoveOpen) {
+        await sellAsset({
+          symbol: payload.symbol,
+          quantity: payload.quantity
+        });
       }
 
       await loadData();
       closeModals();
     } catch (error) {
-      setFormError("Unable to submit the request. Please try again.");
+      setFormError(error.message || "Operation failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return <div className="loading">Loading portfolio...</div>;
+  }
 
   return (
     <div className="app-shell">
@@ -283,9 +212,10 @@ const App = () => {
       <div className="content">
         <Header
           totalValue={formatCurrency(portfolioValue)}
-          totalReturn={formatPercent(performance.profitLossPercent)}
+          totalReturn={formatPercent(performance?.profitLossPercent || 0)}
           onAdd={openAddModal}
         />
+
         <Routes>
           <Route
             path="/"
@@ -294,7 +224,7 @@ const App = () => {
                 <Dashboard
                   allocation={assetAllocation}
                   assets={assets}
-                  history={history}
+                  history={history} // ← still empty/mocked
                   summaryCards={summaryCards}
                   totalValue={formatCurrency(portfolioValue)}
                   formatCurrency={formatCurrency}
@@ -319,7 +249,7 @@ const App = () => {
             element={
               <PerformancePage
                 history={history}
-                performance={performance}
+                performance={performance || {}}
                 totalValue={portfolioValue}
                 formatCurrency={formatCurrency}
                 formatPercent={formatPercent}
@@ -333,13 +263,12 @@ const App = () => {
 
       {(isAddOpen || isRemoveOpen) && (
         <div className="modal-overlay" onClick={closeModals}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{isAddOpen ? "Add Asset" : "Remove Asset"}</h3>
-              <button className="modal-close" onClick={closeModals} type="button">
-                ×
-              </button>
+              <h3>{isAddOpen ? "Add Asset" : "Remove / Sell Asset"}</h3>
+              <button className="modal-close" onClick={closeModals}>×</button>
             </div>
+
             <form className="modal-form" onSubmit={handleSubmit}>
               <label className="form-field">
                 <span>Symbol</span>
@@ -348,37 +277,49 @@ const App = () => {
                   value={formState.symbol}
                   onChange={handleInputChange}
                   placeholder="AAPL, BTC-USD, VOO"
+                  disabled={isSubmitting}
                 />
               </label>
+
               {isAddOpen && (
                 <label className="form-field">
                   <span>Asset Type</span>
-                  <select name="type" value={formState.type} onChange={handleInputChange}>
+                  <select
+                    name="type"
+                    value={formState.type}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
+                  >
                     <option value="STOCK">Stock</option>
-                    <option value="BOND">Bond ETF</option>
+                    <option value="BOND">Bond / ETF</option>
                     <option value="CRYPTO">Crypto</option>
                   </select>
                 </label>
               )}
+
               <label className="form-field">
                 <span>Quantity</span>
                 <input
                   name="quantity"
+                  type="number"
+                  step="0.0001"
+                  min="0.0001"
                   value={formState.quantity}
                   onChange={handleInputChange}
                   placeholder="10"
-                  type="number"
-                  step="0.0001"
+                  disabled={isSubmitting}
                 />
               </label>
+
               {isAddOpen && (
                 <label className="form-field">
                   <span>Purchase Date</span>
                   <input
                     name="purchaseDate"
+                    type="date"
                     value={formState.purchaseDate}
                     onChange={handleInputChange}
-                    type="date"
+                    disabled={isSubmitting}
                   />
                 </label>
               )}
@@ -386,11 +327,20 @@ const App = () => {
               {formError && <div className="form-error">{formError}</div>}
 
               <div className="modal-actions">
-                <button className="btn secondary" type="button" onClick={closeModals}>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={closeModals}
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </button>
-                <button className="btn" type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Submitting..." : "Confirm"}
+                <button
+                  type="submit"
+                  className="btn"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Processing..." : "Confirm"}
                 </button>
               </div>
             </form>
