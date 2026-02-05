@@ -31,15 +31,18 @@ public class PortfolioService {
     private final StockClient stockClient;
     private final BondClient bondClient;
     private final CryptoClient cryptoClient;
+    private final WatchlistService watchlistService;
 
     public PortfolioService(PortfolioRepository repository,
                             StockClient stockClient,
                             BondClient bondClient,
-                            CryptoClient cryptoClient) {
+                            CryptoClient cryptoClient,
+                            WatchlistService watchlistService) {
         this.repository = repository;
         this.stockClient = stockClient;
         this.bondClient = bondClient;
         this.cryptoClient = cryptoClient;
+        this.watchlistService = watchlistService;
     }
 
     private BigDecimal getLivePrice(String symbol, AssetType type) {
@@ -64,7 +67,9 @@ public class PortfolioService {
         asset.setBuyPrice(historicalPrice); // Now this holds the Python-fetched price!
         asset.setBuyTime(buyTime);
 
-        return repository.save(asset);
+        PortfolioAsset saved = repository.save(asset);
+        watchlistService.add(symbol, type);
+        return saved;
     }
 
 
