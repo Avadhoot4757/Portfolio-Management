@@ -27,13 +27,20 @@ export const getPortfolioValue = async () => {
 
 export const buyAsset = async ({ symbol, type, quantity, purchaseDate }) => {
   // purchaseDate is not used in your current backend → ignored for now
+  let buyTimeValue
+  if (purchaseDate) {
+    // Convert YYYY-MM-DD to YYYY-MM-DDTHH:mm:ss (use midnight or current time)
+    buyTimeValue = `${purchaseDate}T00:00:00`;   // midnight
+    // OR: buyTimeValue = new Date(purchaseDate).toISOString(); // full current time
+  }
   const params = new URLSearchParams({
     symbol: symbol.toUpperCase(),
     type,
     quantity: quantity.toString(),
+    buyTime: buyTimeValue,
   });
 
-  const response = await fetch(`${API_BASE_URL}/buy?${params.toString()}`, {
+  const response = await fetch(`${API_BASE_URL}/add?${params.toString()}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",

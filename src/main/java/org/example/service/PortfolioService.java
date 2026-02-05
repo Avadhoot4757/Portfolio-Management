@@ -64,7 +64,8 @@ public class PortfolioService {
     private BigDecimal fetchPriceWithPython(String symbol, LocalDateTime time) {
         String dateStr = time.toLocalDate().toString();
         // Path to your virtual environment's python executable
-        String pythonExecutable = System.getProperty("user.dir") + "\\.venv\\Scripts\\python.exe";
+//        String pythonExecutable = System.getProperty("user.dir") + "\\.venv\\Scripts\\python.exe";
+        String pythonExecutable = "C:/Users/Administrator/IdeaProjects/Portfolio-Management/.venv/Scripts/python.exe";
 
         try {
             ProcessBuilder pb = new ProcessBuilder(pythonExecutable, "fetch_price.py", symbol, dateStr);
