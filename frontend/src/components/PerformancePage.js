@@ -105,7 +105,11 @@ const PerformancePage = ({
         </div>
 
         {chartHistory && chartHistory.length > 0 ? (
-          <PerformanceChart history={chartHistory} />
+          <PerformanceChart
+            history={chartHistory}
+            investedSeries={selectedAsset ? [] : chartHistory.map((item) => item.invested)}
+            investedLabel="Invested"
+          />
         ) : (
           <div className="chart-empty">
             No history available for this asset yet.

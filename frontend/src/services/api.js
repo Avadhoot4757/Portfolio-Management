@@ -24,6 +24,11 @@ export const getPortfolioPerformance = async () => {
   return handleResponse(response);
 };
 
+export const getPortfolioHistory = async () => {
+  const response = await fetch(`${API_BASE_URL}/performance/history`);
+  return handleResponse(response);
+};
+
 export const getPortfolioValue = async () => {
   // We'll reuse getPortfolioPerformance since it already contains currentValue
   const perf = await getPortfolioPerformance();

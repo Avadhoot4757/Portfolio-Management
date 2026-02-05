@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useRef } from "react";
 import { Chart } from "chart.js/auto";
 
-const PerformanceChart = ({ history }) => {
+const PerformanceChart = ({ history, investedSeries, investedLabel = "Invested" }) => {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
 
@@ -28,30 +28,52 @@ const PerformanceChart = ({ history }) => {
       ? hexToRgba(lineColor, 0.2)
       : lineColor;
 
+    const datasets = [
+      {
+        label: "Value",
+        data: history.map((item) => item.value),
+        borderColor: lineColor,
+        backgroundColor: fillColor,
+        fill: true,
+        tension: 0,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: lineColor
+      }
+    ];
+
+    if (Array.isArray(investedSeries) && investedSeries.length > 0) {
+      const investedColor = styles.getPropertyValue("--muted-strong").trim() || "#6b7280";
+      datasets.push({
+        label: investedLabel,
+        data: investedSeries,
+        borderColor: investedColor,
+        backgroundColor: "transparent",
+        fill: false,
+        tension: 0,
+        borderWidth: 2,
+        borderDash: [6, 6],
+        pointRadius: 0,
+        pointHoverRadius: 0
+      });
+    }
+
     chartRef.current = new Chart(context, {
       type: "line",
       data: {
         labels: history.map((item) => item.date),
-        datasets: [
-          {
-            data: history.map((item) => item.value),
-            borderColor: lineColor,
-            backgroundColor: fillColor,
-            fill: true,
-            tension: 0,
-            borderWidth: 2.5,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            pointHoverBackgroundColor: lineColor
-          }
-        ]
+        datasets
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: false
+            display: datasets.length > 1,
+            labels: {
+              color: styles.getPropertyValue("--muted-strong").trim() || "#6b7280"
+            }
           }
         },
         scales: {
@@ -88,7 +110,7 @@ const PerformanceChart = ({ history }) => {
         chartRef.current.destroy();
       }
     };
-  }, [history]);
+  }, [history, investedSeries, investedLabel]);
 
   return (
     <div className="chart-large">

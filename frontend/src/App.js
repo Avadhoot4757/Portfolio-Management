@@ -9,6 +9,7 @@ import SettingsPage from "./components/SettingsPage";
 import {
   getAllAssets,
   getPortfolioPerformance,
+  getPortfolioHistory,
   buyAsset,
   sellAsset
 } from "./services/api";
@@ -73,9 +74,10 @@ const App = () => {
       setLoading(true);
     }
     try {
-      const [assetsResponse, performanceResponse] = await Promise.all([
+      const [assetsResponse, performanceResponse, historyResponse] = await Promise.all([
         getAllAssets(),
-        getPortfolioPerformance()
+        getPortfolioPerformance(),
+        getPortfolioHistory()
       ]);
 
       setAllAssets(assetsResponse || []);
@@ -101,6 +103,7 @@ const App = () => {
       });
 
       setMergedAssets(merged);
+      setHistory(Array.isArray(historyResponse) ? historyResponse : []);
 
     } catch (error) {
       console.error("Failed to load portfolio data:", error);

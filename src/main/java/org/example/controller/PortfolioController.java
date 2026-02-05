@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import org.example.dto.PortfolioHistoryPointDTO;
 import org.example.model.AssetType;
 import org.example.model.PortfolioAsset;
 import org.example.model.PortfolioPerformance;
@@ -59,6 +60,16 @@ public class PortfolioController {
     @GetMapping("/performance")
     public PortfolioPerformance performance() {
         return service.getPerformance();
+    }
+
+    @GetMapping("/performance/history")
+    public List<PortfolioHistoryPointDTO> portfolioHistory() {
+        return service.getPortfolioHistory();
+    }
+
+    @PostMapping("/backfill/buy-price")
+    public List<PortfolioAsset> backfillBuyPrices() {
+        return service.backfillMissingBuyPrices();
     }
 
     @GetMapping("/{id}")
