@@ -1,6 +1,7 @@
 package org.example.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public class AssetPerformance {
 
@@ -8,6 +9,7 @@ public class AssetPerformance {
     private AssetType type;
     private BigDecimal quantity;
     private BigDecimal buyPrice;
+    private LocalDateTime buyTime;
     private BigDecimal currentPrice;
     private BigDecimal invested;
     private BigDecimal currentValue;
@@ -15,7 +17,7 @@ public class AssetPerformance {
     private BigDecimal pnlPercent;
 
     public AssetPerformance(String symbol, AssetType type, BigDecimal quantity,
-                            BigDecimal buyPrice, BigDecimal currentPrice,
+                            BigDecimal buyPrice, LocalDateTime buyTime, BigDecimal currentPrice,
                             BigDecimal invested, BigDecimal currentValue,
                             BigDecimal pnl, BigDecimal pnlPercent) {
         this.symbol = symbol;
@@ -28,7 +30,7 @@ public class AssetPerformance {
         this.pnl = pnl;
         this.pnlPercent = pnlPercent;
     }
-
+    public LocalDateTime getBuyTime() { return buyTime; }
     public String getSymbol() { return symbol; }
     public AssetType getType() { return type; }
     public BigDecimal getQuantity() { return quantity; }

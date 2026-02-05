@@ -131,6 +131,7 @@ public class PortfolioService {
                     asset.getAssetType(),
                     asset.getQuantity(),
                     asset.getBuyPrice(),
+                    asset.getBuyTime(),
                     currentPrice,
                     invested,
                     currentValue,

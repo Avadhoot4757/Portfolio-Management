@@ -4,6 +4,18 @@ import PerformanceChart from "./PerformanceChart";
 import HoldingsTable from "./HoldingsTable";
 import SummaryCards from "./SummaryCards";
 
+// Helper function to format dates nicely
+const formatDate = (dateString) => {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Invalid date";
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 const resolveAssetHistory = (asset) => {
   const history =
     asset?.history ||
@@ -38,6 +50,7 @@ const PerformancePage = ({
 }) => {
   const [selectedAsset, setSelectedAsset] = useState(null);
   const assets = performance.assets || [];
+
   const summaryCards = useMemo(() => {
     const totalInvested = Number(performance.totalInvested || 0);
     const currentValue = Number(performance.currentValue || totalValue || 0);
@@ -89,6 +102,7 @@ const PerformancePage = ({
             Show Portfolio
           </button>
         </div>
+
         {chartHistory && chartHistory.length > 0 ? (
           <PerformanceChart history={chartHistory} />
         ) : (
@@ -106,8 +120,10 @@ const PerformancePage = ({
           rows={assets}
           formatCurrency={formatCurrency}
           formatPercent={formatPercent}
+          formatDate={formatDate}               // ← new prop
           selectedSymbol={selectedAsset?.symbol}
           onRowClick={(row) => setSelectedAsset(row)}
+          // Note: showRemove and onRemove are not passed here (they're optional)
         />
       </AnimatedCard>
 

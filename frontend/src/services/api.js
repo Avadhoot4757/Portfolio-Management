@@ -11,6 +11,11 @@ const handleResponse = async (response) => {
 
 export const getAllAssets = async () => {
   const response = await fetch(`${API_BASE_URL}`);
+
+  // Clone BEFORE body is read
+  const clone = response.clone();
+  clone.json().then(data => console.log("API Response:", data));
+
   return handleResponse(response);
 };
 
@@ -56,7 +61,7 @@ export const sellAsset = async ({ symbol, quantity }) => {
     quantity: quantity.toString(),
   });
 
-  const response = await fetch(`${API_BASE_URL}/sell?${params.toString()}`, {
+  const response = await fetch(`${API_BASE_URL}/remove?${params.toString()}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",

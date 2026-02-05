@@ -7,15 +7,39 @@ const resolveType = (type) => {
   return type;
 };
 
+// Simple fallback formatter if prop is not passed
+const defaultFormatDate = (dateString) => {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 const HoldingsTable = ({
   rows,
   formatCurrency,
   formatPercent,
+  formatDate = defaultFormatDate,
   showRemove,
   onRemove,
   onRowClick,
   selectedSymbol
 }) => {
+  // ────────────────────────────────────────────────
+  // Add these logs to see the incoming data
+  console.log("HoldingsTable received rows:", rows);
+  console.log("Number of assets:", rows?.length || 0);
+  console.log("Selected symbol:", selectedSymbol);
+  console.log("showRemove:", showRemove);
+  // Optional: log first row structure if exists
+  if (rows?.length > 0) {
+    console.log("First row sample:", rows[0]);
+  }
+  // ────────────────────────────────────────────────
+
   return (
     <div className="table-wrap">
       <table className="holdings-table">
@@ -26,6 +50,7 @@ const HoldingsTable = ({
             <th>Quantity</th>
             <th>Current Price</th>
             <th>Cost Basis</th>
+            <th>Purchase Date</th>
             <th>Market Value</th>
             <th>P/L</th>
             {showRemove && <th>Actions</th>}
@@ -57,6 +82,7 @@ const HoldingsTable = ({
                 <td>{row.quantity}</td>
                 <td>{formatCurrency(currentPrice)}</td>
                 <td>{formatCurrency(row.buyPrice)}</td>
+                <td>{formatDate(row.buyTime)}</td>
                 <td>{formatCurrency(marketValue)}</td>
                 <td className={isProfit ? "profit" : "loss"}>
                   {formatCurrency(pnl)}

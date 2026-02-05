@@ -13,7 +13,7 @@ import {
   sellAsset
 } from "./services/api";
 
-const DEFAULT_CASH_BALANCE = 25000; // ← keep until you have a real cash endpoint
+const DEFAULT_CASH_BALANCE = 25000;
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-US", {
@@ -49,9 +49,11 @@ const buildTotalsByType = (assets) => {
 
 const App = () => {
   const [performance, setPerformance] = useState(null);
+  const [allAssets, setAllAssets] = useState([]);           // full assets from GET /portfolio
+  const [mergedAssets, setMergedAssets] = useState([]);     // merged result we'll pass to tables
   const [portfolioValue, setPortfolioValue] = useState(0);
-  const [history, setHistory] = useState([]); // ← still mock / empty until you add history endpoint
-  const [cashBalance, setCashBalance] = useState(DEFAULT_CASH_BALANCE); // ← placeholder
+  const [history, setHistory] = useState([]);
+  const [cashBalance, setCashBalance] = useState(DEFAULT_CASH_BALANCE);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isRemoveOpen, setIsRemoveOpen] = useState(false);
   const [formState, setFormState] = useState({
@@ -72,17 +74,30 @@ const App = () => {
         getPortfolioPerformance()
       ]);
 
-      // performanceResponse should match your example:
-      // { totalInvested, currentValue, profitLoss, profitLossPercent, assets: [...] }
+      setAllAssets(assetsResponse || []);
       setPerformance(performanceResponse);
       setPortfolioValue(Number(performanceResponse.currentValue || 0));
 
-      // If you later add a cash balance endpoint, fetch it here:
-      // const cash = await getCashBalance();
-      // setCashBalance(cash);
+      // Merge logic: enrich allAssets with performance data
+      const performanceMap = new Map(
+        (performanceResponse?.assets || []).map(asset => [asset.symbol.toUpperCase(), asset])
+      );
 
-      // History still mocked — replace when you have real data
-      // setHistory(realHistory);
+      const merged = (assetsResponse || []).map(asset => {
+        const perf = performanceMap.get(asset.symbol.toUpperCase());
+        return {
+          ...asset,                           // id, buyTime, assetType, buyPrice, quantity
+          type: perf?.type || normalizeType(asset.assetType),
+          currentPrice: perf?.currentPrice || 0,
+          invested: perf?.invested || Number(asset.buyPrice) * Number(asset.quantity),
+          currentValue: perf?.currentValue || 0,
+          pnl: perf?.pnl || 0,
+          pnlPercent: perf?.pnlPercent || 0
+        };
+      });
+
+      setMergedAssets(merged);
+
     } catch (error) {
       console.error("Failed to load portfolio data:", error);
       setFormError("Failed to load portfolio data. Please try again later.");
@@ -93,17 +108,12 @@ const App = () => {
 
   useEffect(() => {
     loadData();
-    // Optional: auto-refresh every 30–60 seconds
-    // const interval = setInterval(loadData, 60000);
-    // return () => clearInterval(interval);
   }, []);
 
   const totals = useMemo(
-    () => buildTotalsByType(performance?.assets || []),
-    [performance]
+    () => buildTotalsByType(mergedAssets),
+    [mergedAssets]
   );
-
-  const assets = useMemo(() => performance?.assets || [], [performance]);
 
   const summaryCards = useMemo(
     () => [
@@ -178,9 +188,8 @@ const App = () => {
     try {
       const payload = {
         symbol: formState.symbol.toUpperCase(),
-        type: formState.type, // already matches your enum (STOCK, BOND, CRYPTO)
+        type: formState.type,
         quantity: quantityValue,
-        // purchaseDate is not used by backend yet — can be removed later
         purchaseDate: formState.purchaseDate
       };
 
@@ -223,8 +232,8 @@ const App = () => {
               <section id="dashboard" className="page-section">
                 <Dashboard
                   allocation={assetAllocation}
-                  assets={assets}
-                  history={history} // ← still empty/mocked
+                  assets={mergedAssets}
+                  history={history}
                   summaryCards={summaryCards}
                   totalValue={formatCurrency(portfolioValue)}
                   formatCurrency={formatCurrency}
@@ -237,7 +246,7 @@ const App = () => {
             path="/holdings"
             element={
               <HoldingsPage
-                assets={assets}
+                assets={mergedAssets}                  // ← now merged, has both basic + performance fields
                 formatCurrency={formatCurrency}
                 formatPercent={formatPercent}
                 onRemoveAsset={openRemoveForSymbol}
