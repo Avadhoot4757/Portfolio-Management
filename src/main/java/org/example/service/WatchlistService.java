@@ -5,6 +5,7 @@ import org.example.dto.MarketQuote;
 import org.example.model.AssetType;
 import org.example.model.WatchlistAsset;
 import org.example.repository.WatchlistRepository;
+import org.example.exceptions.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,13 +31,21 @@ public class WatchlistService {
 
     @Transactional
     public WatchlistAsset add(String symbol, AssetType type) {
-        return repo.findBySymbol(symbol)
-                .orElseGet(() -> repo.save(new WatchlistAsset(symbol, type)));
+        String normalized = symbol == null ? null : symbol.toUpperCase();
+        return repo.findBySymbolIgnoreCase(normalized)
+                .map(existing -> {
+                    if (existing.getAssetType() == null && type != null) {
+                        existing.setAssetType(type);
+                        return repo.save(existing);
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> repo.save(new WatchlistAsset(normalized, type)));
     }
 
     @Transactional
     public void remove(String symbol) {
-        repo.deleteBySymbol(symbol);
+        repo.deleteBySymbolIgnoreCase(symbol);
     }
 
     public List<WatchlistAsset> getAll() {
@@ -49,5 +58,16 @@ public class WatchlistService {
             case BOND -> bondClient.getBondQuote(asset.getSymbol());
             case CRYPTO -> cryptoClient.getCryptoQuote(asset.getSymbol());
         }).toList();
+    }
+
+    public MarketQuote getQuoteForSymbol(String symbol) {
+        WatchlistAsset asset = repo.findBySymbolIgnoreCase(symbol)
+                .orElseThrow(() -> new ResourceNotFoundException("Watchlist asset " + symbol + " not found"));
+
+        return switch (asset.getAssetType()) {
+            case STOCK -> stockClient.getStockQuote(asset.getSymbol());
+            case BOND -> bondClient.getBondQuote(asset.getSymbol());
+            case CRYPTO -> cryptoClient.getCryptoQuote(asset.getSymbol());
+        };
     }
 }

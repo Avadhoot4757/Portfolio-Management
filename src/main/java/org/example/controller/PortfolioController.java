@@ -1,5 +1,6 @@
 package org.example.controller;
 
+import org.example.dto.PortfolioHistoryPointDTO;
 import org.example.model.AssetType;
 import org.example.model.PortfolioAsset;
 import org.example.model.PortfolioPerformance;
@@ -41,8 +42,9 @@ public class PortfolioController {
      * Removes a specific asset lot by its database ID.
      */
     @DeleteMapping("/remove/{id}")
-    public ResponseEntity<Void> remove(@PathVariable Long id) {
-        service.removeAsset(id);
+    public ResponseEntity<Void> remove(@PathVariable Long id,
+                                       @RequestParam BigDecimal quantity) {
+        service.removeAsset(id, quantity);
         return ResponseEntity.noContent().build(); // Returns 204 No Content on success
     }
 
@@ -59,6 +61,16 @@ public class PortfolioController {
     @GetMapping("/performance")
     public PortfolioPerformance performance() {
         return service.getPerformance();
+    }
+
+    @GetMapping("/performance/history")
+    public List<PortfolioHistoryPointDTO> portfolioHistory() {
+        return service.getPortfolioHistory();
+    }
+
+    @PostMapping("/backfill/buy-price")
+    public List<PortfolioAsset> backfillBuyPrices() {
+        return service.backfillMissingBuyPrices();
     }
 
     @GetMapping("/{id}")

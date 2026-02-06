@@ -7,5 +7,7 @@ import java.util.Optional;
 
 public interface WatchlistRepository extends JpaRepository<WatchlistAsset, Long> {
     Optional<WatchlistAsset> findBySymbol(String symbol);
+    Optional<WatchlistAsset> findBySymbolIgnoreCase(String symbol);
     void deleteBySymbol(String symbol);
+    void deleteBySymbolIgnoreCase(String symbol);
 }

@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface PortfolioRepository extends JpaRepository<PortfolioAsset, Long> {
 
     Optional<PortfolioAsset> findBySymbol(String symbol);
+    Optional<PortfolioAsset> findBySymbolAndBuyTime(String symbol, java.time.LocalDateTime buyTime);
 
     List<PortfolioAsset> findByAssetType(AssetType assetType);
 }

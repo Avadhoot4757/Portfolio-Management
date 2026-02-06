@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import HoldingsPage from "./components/HoldingsPage";
 import PerformancePage from "./components/PerformancePage";
 import SettingsPage from "./components/SettingsPage";
+import WatchlistTab from './components/WathlistTab';
 import ChatbotWidget from "./components/ChatbotWidget";
 import {
   getAllAssets,
   getPortfolioPerformance,
+  getPortfolioHistory,
   buyAsset,
   sellAsset
 } from "./services/api";
@@ -49,6 +51,8 @@ const buildTotalsByType = (assets) => {
 };
 
 const App = () => {
+  const location = useLocation();
+  const isDashboardRoute = location.pathname === "/";
   const [performance, setPerformance] = useState(null);
   const [allAssets, setAllAssets] = useState([]);           // full assets from GET /portfolio
   const [mergedAssets, setMergedAssets] = useState([]);     // merged result we'll pass to tables
@@ -62,7 +66,8 @@ const App = () => {
     symbol: "",
     type: "STOCK",
     quantity: "",
-    purchaseDate: ""
+    purchaseDate: "",
+    maxQuantity: ""
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,9 +79,10 @@ const App = () => {
       setLoading(true);
     }
     try {
-      const [assetsResponse, performanceResponse] = await Promise.all([
+      const [assetsResponse, performanceResponse, historyResponse] = await Promise.all([
         getAllAssets(),
-        getPortfolioPerformance()
+        getPortfolioPerformance(),
+        getPortfolioHistory()
       ]);
 
       setAllAssets(assetsResponse || []);
@@ -85,11 +91,13 @@ const App = () => {
 
       // Merge logic: enrich allAssets with performance data
       const performanceMap = new Map(
-        (performanceResponse?.assets || []).map(asset => [asset.symbol.toUpperCase(), asset])
+        (performanceResponse?.assets || [])
+          .filter(asset => asset.id !== undefined && asset.id !== null)
+          .map(asset => [asset.id, asset])
       );
 
       const merged = (assetsResponse || []).map(asset => {
-        const perf = performanceMap.get(asset.symbol.toUpperCase());
+        const perf = performanceMap.get(asset.id);
         return {
           ...asset,                           // id, buyTime, assetType, buyPrice, quantity
           type: perf?.type || normalizeType(asset.assetType),
@@ -102,6 +110,7 @@ const App = () => {
       });
 
       setMergedAssets(merged);
+      setHistory(Array.isArray(historyResponse) ? historyResponse : []);
 
     } catch (error) {
       console.error("Failed to load portfolio data:", error);
@@ -154,18 +163,20 @@ const App = () => {
   };
 
   const openAddModal = () => {
-    setFormState({ id: null, symbol: "", type: "STOCK", quantity: "", purchaseDate: "" });
+    setFormState({ id: null, symbol: "", type: "STOCK", quantity: "", purchaseDate: "", maxQuantity: "" });
     setFormError("");
     setIsAddOpen(true);
   };
 
   const openRemoveForAsset = (asset) => {
+    const assetQty = Number(asset?.quantity || 0);
     setFormState({
       id: asset?.id ?? null,
       symbol: (asset?.symbol || "").toUpperCase(),
       type: "STOCK",
-      quantity: "",
-      purchaseDate: ""
+      quantity: assetQty ? assetQty.toString() : "",
+      purchaseDate: "",
+      maxQuantity: assetQty ? assetQty.toString() : ""
     });
     setFormError("");
     setIsRemoveOpen(true);
@@ -208,6 +219,20 @@ const App = () => {
         return;
       }
     }
+    if (isRemoveOpen) {
+      const quantityValue = Number(formState.quantity);
+      const maxValue = Number(formState.maxQuantity);
+      if (isNaN(quantityValue) || quantityValue <= 0) {
+        setFormError("Quantity must be a positive number.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!isNaN(maxValue) && maxValue > 0 && quantityValue > maxValue) {
+        setFormError("Quantity cannot exceed available quantity.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const payload = {
@@ -224,7 +249,7 @@ const App = () => {
         if (!payload.id) {
           throw new Error("Missing asset id for removal.");
         }
-        await sellAsset({ id: payload.id });
+        await sellAsset({ id: payload.id, quantity: Number(formState.quantity) });
       }
 
       await loadData({ showLoading: false });
@@ -244,11 +269,13 @@ const App = () => {
     <div className="app-shell">
       <Sidebar />
       <div className="content">
-        <Header
-          totalValue={formatCurrency(totalValueWithCash)}
-          totalReturn={formatPercent(performance?.profitLossPercent || 0)}
-          onAdd={openAddModal}
-        />
+        {isDashboardRoute && (
+          <Header
+            totalValue={formatCurrency(totalValueWithCash)}
+            totalReturn={formatPercent(performance?.profitLossPercent || 0)}
+            onAdd={openAddModal}
+          />
+        )}
         
         <ChatbotWidget />
 
@@ -297,6 +324,7 @@ const App = () => {
             }
           />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/watchlist" element={<WatchlistTab />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
@@ -348,6 +376,23 @@ const App = () => {
                     value={formState.quantity}
                     onChange={handleInputChange}
                     placeholder="10"
+                    disabled={isSubmitting}
+                  />
+                </label>
+              )}
+
+              {isRemoveOpen && (
+                <label className="form-field">
+                  <span>Quantity to sell</span>
+                  <input
+                    name="quantity"
+                    type="number"
+                    step="0.0001"
+                    min="0.0001"
+                    max={formState.maxQuantity || undefined}
+                    value={formState.quantity}
+                    onChange={handleInputChange}
+                    placeholder={formState.maxQuantity ? `Max ${formState.maxQuantity}` : "0.1"}
                     disabled={isSubmitting}
                   />
                 </label>
