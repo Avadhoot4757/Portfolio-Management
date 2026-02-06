@@ -65,7 +65,8 @@ const App = () => {
     symbol: "",
     type: "STOCK",
     quantity: "",
-    purchaseDate: ""
+    purchaseDate: "",
+    maxQuantity: ""
   });
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,11 +90,13 @@ const App = () => {
 
       // Merge logic: enrich allAssets with performance data
       const performanceMap = new Map(
-        (performanceResponse?.assets || []).map(asset => [asset.symbol.toUpperCase(), asset])
+        (performanceResponse?.assets || [])
+          .filter(asset => asset.id !== undefined && asset.id !== null)
+          .map(asset => [asset.id, asset])
       );
 
       const merged = (assetsResponse || []).map(asset => {
-        const perf = performanceMap.get(asset.symbol.toUpperCase());
+        const perf = performanceMap.get(asset.id);
         return {
           ...asset,                           // id, buyTime, assetType, buyPrice, quantity
           type: perf?.type || normalizeType(asset.assetType),
@@ -159,18 +162,20 @@ const App = () => {
   };
 
   const openAddModal = () => {
-    setFormState({ id: null, symbol: "", type: "STOCK", quantity: "", purchaseDate: "" });
+    setFormState({ id: null, symbol: "", type: "STOCK", quantity: "", purchaseDate: "", maxQuantity: "" });
     setFormError("");
     setIsAddOpen(true);
   };
 
   const openRemoveForAsset = (asset) => {
+    const assetQty = Number(asset?.quantity || 0);
     setFormState({
       id: asset?.id ?? null,
       symbol: (asset?.symbol || "").toUpperCase(),
       type: "STOCK",
-      quantity: "",
-      purchaseDate: ""
+      quantity: assetQty ? assetQty.toString() : "",
+      purchaseDate: "",
+      maxQuantity: assetQty ? assetQty.toString() : ""
     });
     setFormError("");
     setIsRemoveOpen(true);
@@ -213,6 +218,20 @@ const App = () => {
         return;
       }
     }
+    if (isRemoveOpen) {
+      const quantityValue = Number(formState.quantity);
+      const maxValue = Number(formState.maxQuantity);
+      if (isNaN(quantityValue) || quantityValue <= 0) {
+        setFormError("Quantity must be a positive number.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!isNaN(maxValue) && maxValue > 0 && quantityValue > maxValue) {
+        setFormError("Quantity cannot exceed available quantity.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const payload = {
@@ -229,7 +248,7 @@ const App = () => {
         if (!payload.id) {
           throw new Error("Missing asset id for removal.");
         }
-        await sellAsset({ id: payload.id });
+        await sellAsset({ id: payload.id, quantity: Number(formState.quantity) });
       }
 
       await loadData({ showLoading: false });
@@ -354,6 +373,23 @@ const App = () => {
                     value={formState.quantity}
                     onChange={handleInputChange}
                     placeholder="10"
+                    disabled={isSubmitting}
+                  />
+                </label>
+              )}
+
+              {isRemoveOpen && (
+                <label className="form-field">
+                  <span>Quantity to sell</span>
+                  <input
+                    name="quantity"
+                    type="number"
+                    step="0.0001"
+                    min="0.0001"
+                    max={formState.maxQuantity || undefined}
+                    value={formState.quantity}
+                    onChange={handleInputChange}
+                    placeholder={formState.maxQuantity ? `Max ${formState.maxQuantity}` : "0.1"}
                     disabled={isSubmitting}
                   />
                 </label>

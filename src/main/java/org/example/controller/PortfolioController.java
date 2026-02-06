@@ -42,8 +42,9 @@ public class PortfolioController {
      * Removes a specific asset lot by its database ID.
      */
     @DeleteMapping("/remove/{id}")
-    public ResponseEntity<Void> remove(@PathVariable Long id) {
-        service.removeAsset(id);
+    public ResponseEntity<Void> remove(@PathVariable Long id,
+                                       @RequestParam BigDecimal quantity) {
+        service.removeAsset(id, quantity);
         return ResponseEntity.noContent().build(); // Returns 204 No Content on success
     }
 

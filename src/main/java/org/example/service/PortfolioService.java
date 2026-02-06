@@ -62,10 +62,11 @@ public class PortfolioService {
 
     private BigDecimal getLivePrice(String symbol, AssetType type, BigDecimal fallbackPrice) {
         try {
+            String formattedSymbol = formatSymbol(symbol, type);
             return switch (type) {
-                case STOCK -> BigDecimal.valueOf(stockClient.getStockQuote(symbol).getPrice());
-                case BOND -> BigDecimal.valueOf(bondClient.getBondQuote(symbol).getPrice());
-                case CRYPTO -> BigDecimal.valueOf(cryptoClient.getCryptoQuote(symbol).getPrice());
+                case STOCK -> BigDecimal.valueOf(stockClient.getStockQuote(formattedSymbol).getPrice());
+                case BOND -> BigDecimal.valueOf(bondClient.getBondQuote(formattedSymbol).getPrice());
+                case CRYPTO -> BigDecimal.valueOf(cryptoClient.getCryptoQuote(formattedSymbol).getPrice());
             };
         } catch (Exception e) {
             return fallbackPrice != null ? fallbackPrice : BigDecimal.ZERO;
@@ -74,17 +75,38 @@ public class PortfolioService {
 
     public PortfolioAsset addAssetWithHistoricalPrice(String symbol, AssetType type,
                                                       BigDecimal quantity, LocalDateTime buyTime) {
-        // 1. CHANGE THIS LINE: Call your new Python bridge instead of the old API method
-        BigDecimal historicalPrice = fetchPriceWithPython(symbol, type, buyTime);
+        if (buyTime == null) {
+            throw new IllegalArgumentException("buyTime is required");
+        }
+        LocalDateTime normalizedBuyTime = buyTime.toLocalDate().atStartOfDay();
+
+        PortfolioAsset existing = repository.findBySymbolAndBuyTime(symbol, normalizedBuyTime)
+                .orElse(null);
+
+        if (existing != null) {
+            BigDecimal existingQty = existing.getQuantity() == null ? BigDecimal.ZERO : existing.getQuantity();
+            BigDecimal updatedQty = existingQty.add(quantity);
+            existing.setQuantity(updatedQty);
+
+            if (existing.getBuyPrice() == null || existing.getBuyPrice().compareTo(BigDecimal.ZERO) == 0) {
+                BigDecimal historicalPrice = fetchPriceWithPython(symbol, type, normalizedBuyTime);
+                existing.setBuyPrice(historicalPrice);
+            }
+
+            PortfolioAsset saved = repository.save(existing);
+            watchlistService.add(symbol, type);
+            return saved;
+        }
+
+        BigDecimal historicalPrice = fetchPriceWithPython(symbol, type, normalizedBuyTime);
         System.out.println(historicalPrice);
 
-        // 2. The rest of the logic remains exactly the same
         PortfolioAsset asset = new PortfolioAsset();
         asset.setSymbol(symbol);
         asset.setAssetType(type);
         asset.setQuantity(quantity);
-        asset.setBuyPrice(historicalPrice); // Now this holds the Python-fetched price!
-        asset.setBuyTime(buyTime);
+        asset.setBuyPrice(historicalPrice);
+        asset.setBuyTime(normalizedBuyTime);
 
         PortfolioAsset saved = repository.save(asset);
         watchlistService.add(symbol, type);
@@ -166,13 +188,23 @@ public class PortfolioService {
         return BigDecimal.ZERO; // Fallback if Python fails
     }
 
-    public void removeAsset(Long id) {
+    public void removeAsset(Long id, BigDecimal quantityToRemove) {
         // Instead of finding by symbol and subtracting, we find the specific ID
         PortfolioAsset asset = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Asset with ID " + id + " not found"));
 
-        // We remove the entire entry from the database
-        repository.delete(asset);
+        if (quantityToRemove == null || quantityToRemove.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantity to remove must be positive");
+        }
+
+        BigDecimal currentQty = asset.getQuantity() == null ? BigDecimal.ZERO : asset.getQuantity();
+        if (quantityToRemove.compareTo(currentQty) >= 0) {
+            repository.delete(asset);
+            return;
+        }
+
+        asset.setQuantity(currentQty.subtract(quantityToRemove));
+        repository.save(asset);
     }
 
     public List<PortfolioAsset> getAllAssets() {
@@ -396,6 +428,7 @@ public class PortfolioService {
             }
 
             return new AssetPerformance(
+                    asset.getId(),
                     asset.getSymbol(),
                     asset.getAssetType(),
                     asset.getQuantity(),

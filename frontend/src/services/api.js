@@ -32,7 +32,7 @@ export const getPortfolioPerformance = async () => {
 };
 
 export const getPortfolioHistory = async () => {
-  const response = await fetch(`${API_BASE_URL}/performance/history`);
+  const response = await fetch(`${API_BASE_URL}/portfolio/performance/history`);
   return handleResponse(response);
 };
 
@@ -67,12 +67,19 @@ export const buyAsset = async ({ symbol, type, quantity, purchaseDate }) => {
   return handleResponse(response);
 };
 
-export const sellAsset = async ({ id }) => {
+export const sellAsset = async ({ id, quantity }) => {
   if (id === undefined || id === null) {
     throw new Error("Asset id is required to remove.");
   }
+  if (quantity === undefined || quantity === null) {
+    throw new Error("Quantity is required to remove.");
+  }
 
-  const response = await fetch(`${API_BASE_URL}/portfolio/remove/${id}`, {
+  const params = new URLSearchParams({
+    quantity: quantity.toString(),
+  });
+
+  const response = await fetch(`${API_BASE_URL}/portfolio/remove/${id}?${params.toString()}`, {
     method: "DELETE",
   });
 
