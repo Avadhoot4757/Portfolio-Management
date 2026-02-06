@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import HoldingsPage from "./components/HoldingsPage";
 import PerformancePage from "./components/PerformancePage";
 import SettingsPage from "./components/SettingsPage";
+import WatchlistTab from './components/WathlistTab';
 import {
   getAllAssets,
   getPortfolioPerformance,
@@ -49,6 +50,8 @@ const buildTotalsByType = (assets) => {
 };
 
 const App = () => {
+  const location = useLocation();
+  const isDashboardRoute = location.pathname === "/";
   const [performance, setPerformance] = useState(null);
   const [allAssets, setAllAssets] = useState([]);           // full assets from GET /portfolio
   const [mergedAssets, setMergedAssets] = useState([]);     // merged result we'll pass to tables
@@ -246,11 +249,13 @@ const App = () => {
     <div className="app-shell">
       <Sidebar />
       <div className="content">
-        <Header
-          totalValue={formatCurrency(totalValueWithCash)}
-          totalReturn={formatPercent(performance?.profitLossPercent || 0)}
-          onAdd={openAddModal}
-        />
+        {isDashboardRoute && (
+          <Header
+            totalValue={formatCurrency(totalValueWithCash)}
+            totalReturn={formatPercent(performance?.profitLossPercent || 0)}
+            onAdd={openAddModal}
+          />
+        )}
 
         <Routes>
           <Route
@@ -297,6 +302,7 @@ const App = () => {
             }
           />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/watchlist" element={<WatchlistTab />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

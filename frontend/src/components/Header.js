@@ -12,7 +12,12 @@ const Header = ({ totalValue, totalReturn, onAdd, onRemove }) => {
           <span className="metric-label">Total Value</span>
           <span className="metric-value">{totalValue}</span>
         </div>
-        <span className="return-pill">{totalReturn}</span>
+        <span
+          className="return-pill"
+          title="Total return since inception (portfolio P/L percent)."
+        >
+          {totalReturn}
+        </span>
       </div>
       <div className="header-actions">
         <button className="btn" onClick={onAdd} type="button">Add Asset</button>
